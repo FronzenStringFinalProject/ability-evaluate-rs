@@ -1,0 +1,15 @@
+[package]
+name = "level-evaluate"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+argmin-math = { version = "0.3.0" }
+argmin = "0.9.0"
+presistence = { version = "0.1.0", path = "../presistence" }
+serde = { version = "1.0.196", features = ["derive"] }
+
+[dev-dependencies]
+tokio = { version = "1.36.0", features = ["test-util", "macros"] }
