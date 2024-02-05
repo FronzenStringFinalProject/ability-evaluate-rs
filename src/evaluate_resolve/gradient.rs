@@ -1,4 +1,4 @@
-use super::EvaluateProblem;
+use super::{defines::irt_3pl_mle_ln_diff, AnsweredQuiz, EvaluateProblem};
 use argmin::core::Gradient;
 impl Gradient for EvaluateProblem {
     type Param = f64;
@@ -9,7 +9,14 @@ impl Gradient for EvaluateProblem {
         Ok(-self
             .records
             .iter()
-            .map(|ob| Self::ln_probability_derivative(*ob, *param))
+            .map(
+                |ob @ &AnsweredQuiz {
+                     diff,
+                     disc,
+                     lambdas,
+                     ..
+                 }| irt_3pl_mle_ln_diff(*param, diff, disc, lambdas, ob.pf()),
+            )
             .sum::<f64>())
     }
 }

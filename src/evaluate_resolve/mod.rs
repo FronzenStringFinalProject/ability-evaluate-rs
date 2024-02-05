@@ -1,3 +1,4 @@
+mod defines;
 use serde::Deserialize;
 use serde::Serialize;
 mod cost_function;
@@ -31,59 +32,15 @@ impl AnsweredQuiz {
     }
 }
 
-const D: f64 = 1.702;
-
-impl EvaluateProblem {
-    pub fn probability(observe: AnsweredQuiz, ability: f64) -> f64 {
-        // println!(
-        //     "abb:{ability} disc:{}exx{}",
-        //     observe.disc,
-        //     D * observe.disc * (ability - observe.diff)
-        // );
-        let raw = observe.lambdas
-            + (1.0 - observe.lambdas)
-                / (1.0 + (-D * observe.disc * (ability - observe.diff)).exp());
-        if raw == 1.0 {
-            raw - 1e-10
-        } else {
-            raw
-        }
-    }
-    pub fn ln_probability(observe: AnsweredQuiz, ability: f64) -> f64 {
-        let p = observe.pi();
-        let s = Self::probability(observe, ability);
-
-        (s.powi(p) * (1.0 - s).powi(p - 1)).ln()
-    }
-
-    /// `disc * D * \[p * s^(p-1) * (1-s)^p - s^p * (1-s)^(p-1)*(p-1)\]`
-    pub fn ln_probability_derivative(observe: AnsweredQuiz, ability: f64) -> f64 {
-        let pf = observe.pf();
-        let pi = observe.pi();
-        let s = Self::probability(observe, ability);
-        // println!(
-        //     "p: {}, s: {}, ln:{}",
-        //     pi,
-        //     s,
-        //     (s.powi(pi) * (1.0 - s).powi(pi - 1)).ln()
-        // );
-        observe.disc
-            * D
-            * (pf * s.powi(pi - 1) * (1.0 - s).powi(pi)
-                - (pf - 1.0) * s.powi(pi) * (1.0 - s).powi(pi - 1))
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use std::f64::INFINITY;
-
     use argmin::solver::linesearch::MoreThuenteLineSearch;
     use argmin::{core::Executor, solver::gradientdescent::SteepestDescent};
     use presistence::{
         sea_orm::{ConnectOptions, Database},
         service::quiz_record::{ChildQuizAns, QuizRecord},
     };
+    use std::f64::INFINITY;
 
     use super::{AnsweredQuiz, EvaluateProblem};
     #[tokio::test]
@@ -115,14 +72,16 @@ mod test {
                 },
             )
             .collect::<Vec<_>>();
-
+        let len = set.len() as f64;
+        let tc = 2.0f64.ln() * len;
+        println!("{tc}");
         let problem = EvaluateProblem { records: set };
         let linesearch = MoreThuenteLineSearch::new();
         let solver = SteepestDescent::new(linesearch);
 
         let exec = Executor::new(problem, solver);
         let res = exec
-            .configure(|state| state.param(4.0).max_iters(20).target_cost(2.0f64.ln()))
+            .configure(|state| state.param(1.0).max_iters(20).target_cost(0.0))
             .run()
             .expect("Err");
 
