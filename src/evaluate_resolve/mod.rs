@@ -14,8 +14,7 @@ impl<'r> EvaluateProblem<'r> {
     }
 }
 
-pub const LEST_QUIZ_NUMBER: usize = 20;
-pub const MIN_QUIZ_NUMBER: usize = 5;
+pub const LEST_QUIZ_NUMBER: usize = 25;
 pub const TARGET_COST: f64 = 500.0;
 #[derive(Clone, Copy, Default, Debug, Serialize, Deserialize)]
 pub struct AnsweredQuiz {
@@ -69,7 +68,7 @@ mod test {
     use super::{AnsweredQuiz, EvaluateProblem};
     #[tokio::test]
     async fn test() {
-        let cid = 24;
+        let cid = 345;
         let db = Database::connect(ConnectOptions::new(
             "postgres://JACKY:wyq020222@localhost/mydb",
         ))
