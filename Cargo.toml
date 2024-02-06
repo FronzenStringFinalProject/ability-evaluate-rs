@@ -10,6 +10,7 @@ argmin-math = { version = "0.3.0" }
 argmin = "0.9.0"
 presistence = { version = "0.1.0", path = "../presistence" }
 serde = { version = "1.0.196", features = ["derive"] }
+anyhow = "1.0.79"
 
 [dev-dependencies]
 tokio = { version = "1.36.0", features = ["test-util", "macros"] }

@@ -895,6 +895,7 @@ dependencies = [
 name = "level-evaluate"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "argmin",
  "argmin-math",
  "presistence",

@@ -1,12 +1,22 @@
 mod defines;
+use presistence::service::quiz_record::ChildQuizAns;
 use serde::Deserialize;
 use serde::Serialize;
 mod cost_function;
 mod gradient;
-pub struct EvaluateProblem {
-    records: Vec<AnsweredQuiz>,
+pub struct EvaluateProblem<'r> {
+    records: &'r [AnsweredQuiz],
 }
 
+impl<'r> EvaluateProblem<'r> {
+    pub fn new(records: &'r [AnsweredQuiz]) -> Self {
+        Self { records }
+    }
+}
+
+pub const LEST_QUIZ_NUMBER: usize = 20;
+pub const MIN_QUIZ_NUMBER: usize = 5;
+pub const TARGET_COST: f64 = 500.0;
 #[derive(Clone, Copy, Default, Debug, Serialize, Deserialize)]
 pub struct AnsweredQuiz {
     diff: f64,
@@ -15,19 +25,31 @@ pub struct AnsweredQuiz {
     correct: bool,
 }
 
+impl From<ChildQuizAns> for AnsweredQuiz {
+    fn from(
+        ChildQuizAns {
+            diff,
+            disc,
+            lambdas,
+            correct,
+            ..
+        }: ChildQuizAns,
+    ) -> Self {
+        AnsweredQuiz {
+            diff,
+            disc,
+            lambdas,
+            correct,
+        }
+    }
+}
+
 impl AnsweredQuiz {
     fn pf(&self) -> f64 {
         if self.correct {
             1.0
         } else {
             0.0
-        }
-    }
-    fn pi(&self) -> i32 {
-        if self.correct {
-            1
-        } else {
-            0
         }
     }
 }
@@ -40,76 +62,60 @@ mod test {
         sea_orm::{ConnectOptions, Database},
         service::quiz_record::{ChildQuizAns, QuizRecord},
     };
-    use std::f64::INFINITY;
+
+    use crate::evaluate_resolve::defines::irt_3pl;
+    use crate::evaluate_resolve::LEST_QUIZ_NUMBER;
 
     use super::{AnsweredQuiz, EvaluateProblem};
     #[tokio::test]
     async fn test() {
+        let cid = 24;
         let db = Database::connect(ConnectOptions::new(
             "postgres://JACKY:wyq020222@localhost/mydb",
         ))
         .await
         .expect("cannot connect  to db");
 
-        let set = QuizRecord::get_ans_quiz_by_child_id(&db, 2)
+        let set = QuizRecord::get_ans_quiz_by_child_id(&db, cid)
             .await
             .expect("cannot get child ans")
             .into_iter()
-            .map(
-                |ChildQuizAns {
-                     diff,
-                     disc,
-                     lambdas,
-                     correct,
-                     ..
-                 }| {
-                    AnsweredQuiz {
-                        diff,
-                        disc,
-                        lambdas,
-                        correct,
-                    }
-                },
-            )
+            .take(LEST_QUIZ_NUMBER)
+            .map(AnsweredQuiz::from)
             .collect::<Vec<_>>();
-        let len = set.len() as f64;
-        let tc = 2.0f64.ln() * len;
-        println!("{tc}");
-        let problem = EvaluateProblem { records: set };
+        let problem = EvaluateProblem { records: &set };
+
         let linesearch = MoreThuenteLineSearch::new();
         let solver = SteepestDescent::new(linesearch);
 
         let exec = Executor::new(problem, solver);
         let res = exec
-            .configure(|state| state.param(1.0).max_iters(20).target_cost(0.0))
+            .configure(|state| state.param(1.0).max_iters(20).target_cost(500.0))
             .run()
             .expect("Err");
 
         println!("{}", res);
-
-        // Extract results from state
-
-        // // Best parameter vector
-
-        // // Cost function value associated with best parameter vector
-        // let best_cost = res.state().get_best_cost();
-
-        // // Check the execution status
-        // let termination_status = res.state().get_termination_status();
-
-        // // Optionally, check why the optimizer terminated (if status is terminated)
-        // let termination_reason = res.state().get_termination_reason();
-
-        // // Time needed for optimization
-        // let time_needed = res.state().get_time().unwrap();
-
-        // // Total number of iterations needed
-        // let num_iterations = res.state().get_iter();
-
-        // // Iteration number where the last best parameter vector was found
-        // let num_iterations_best = res.state().get_last_best_iter();
-
-        // // Number of evaluation counts per method (Cost, Gradient)
-        // let function_evaluation_counts = res.state().get_func_counts();
+        let ab = res.state().best_param.unwrap();
+        println!("abi= {ab}");
+        let set = QuizRecord::get_ans_quiz_by_child_id(&db, cid)
+            .await
+            .expect("cannot get child ans");
+        for ChildQuizAns {
+            diff,
+            quiz,
+            ans,
+            disc,
+            lambdas,
+            correct,
+            ability,
+            pred,
+        } in set
+        {
+            let irt = irt_3pl(ab, diff, disc, lambdas);
+            println!(
+                "quiz:{quiz}={ans}, pred={pred}, expect={}, diff={}, abb= {ability}, correct={correct}, exp_abb={ab}",
+                irt,pred-irt
+            )
+        }
     }
 }
