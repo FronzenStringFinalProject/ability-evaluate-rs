@@ -1,4 +1,5 @@
 mod evaluate_resolve;
+// mod em_resolver;
 
 use anyhow::{anyhow, Ok};
 use argmin::{
@@ -31,3 +32,5 @@ pub fn evaluate(ans_record: &[AnsweredQuiz]) -> anyhow::Result<f64> {
         Err(anyhow!("未找到最佳的水平值"))
     }
 }
+
+pub use anyhow::Error;

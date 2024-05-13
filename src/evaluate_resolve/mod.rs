@@ -1,5 +1,5 @@
 mod defines;
-use presistence::service::quiz_record::ChildQuizAns;
+use presistence::service::child_quiz_service::quiz_record::ChildQuizAns;
 use serde::Deserialize;
 use serde::Serialize;
 mod cost_function;
@@ -18,10 +18,10 @@ pub const LEST_QUIZ_NUMBER: usize = 25;
 pub const TARGET_COST: f64 = 500.0;
 #[derive(Clone, Copy, Default, Debug, Serialize, Deserialize)]
 pub struct AnsweredQuiz {
-    diff: f64,
-    disc: f64,
-    lambdas: f64,
-    correct: bool,
+    pub diff: f64,
+    pub disc: f64,
+    pub lambdas: f64,
+    pub correct: bool,
 }
 
 impl From<ChildQuizAns> for AnsweredQuiz {
@@ -29,7 +29,7 @@ impl From<ChildQuizAns> for AnsweredQuiz {
         ChildQuizAns {
             diff,
             disc,
-            lambdas,
+            lambda,
             correct,
             ..
         }: ChildQuizAns,
@@ -37,7 +37,7 @@ impl From<ChildQuizAns> for AnsweredQuiz {
         AnsweredQuiz {
             diff,
             disc,
-            lambdas,
+            lambdas:lambda,
             correct,
         }
     }
@@ -57,9 +57,10 @@ impl AnsweredQuiz {
 mod test {
     use argmin::solver::linesearch::MoreThuenteLineSearch;
     use argmin::{core::Executor, solver::gradientdescent::SteepestDescent};
+    use presistence::service::ChildQuizService;
     use presistence::{
         sea_orm::{ConnectOptions, Database},
-        service::quiz_record::{ChildQuizAns, QuizRecord},
+        service::quiz_record::ChildQuizAns,
     };
 
     use crate::evaluate_resolve::defines::irt_3pl;
@@ -75,7 +76,7 @@ mod test {
         .await
         .expect("cannot connect  to db");
 
-        let set = QuizRecord::get_ans_quiz_by_child_id(&db, cid)
+        let set = ChildQuizService::get_ans_quiz_by_child_id(&db, cid, 25)
             .await
             .expect("cannot get child ans")
             .into_iter()
@@ -96,7 +97,7 @@ mod test {
         println!("{}", res);
         let ab = res.state().best_param.unwrap();
         println!("abi= {ab}");
-        let set = QuizRecord::get_ans_quiz_by_child_id(&db, cid)
+        let set = ChildQuizService::get_ans_quiz_by_child_id(&db, cid, 25)
             .await
             .expect("cannot get child ans");
         for ChildQuizAns {
